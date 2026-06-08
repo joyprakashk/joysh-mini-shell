@@ -1,160 +1,199 @@
-# joysh
+```bash
+$ ./joysh
+     _                 _     
+    (_) ___  _   _ ___| |__  
+    | |/ _ \| | | / __| '_ \ 
+    | | (_) | |_| \__ \ | | |
+   _/ |\___/ \__, |___/_| |_|
+  |__/        |___/          
 
-A UNIX shell implementation in C demonstrating process management, inter-process communication, and I/O redirection.
+```
 
-[![CI](https://github.com/yourusername/joysh/workflows/CI%20Build%20&%20Test/badge.svg)](https://github.com/yourusername/joysh/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+Production-grade UNIX shell written in C with support for process execution, pipelines, redirection, background jobs and signal handling.
+
+Built to demonstrate Linux systems programming concepts including process lifecycle management, inter-process communication, file descriptor manipulation and UNIX shell architecture.
+
+---
 
 ## Features
 
-- Command execution via `fork(2)` and `execvp(3)`
-- Pipeline support with `pipe(2)`
-- I/O redirection (`<`, `>`, `>>`, `2>`)
-- Background job execution (`&`)
-- Signal handling (SIGINT, SIGTSTP)
-- Built-in commands: `cd`, `pwd`, `exit`, `clear`, `history`, `stats`
-- Command logging and metrics tracking
+* Interactive shell runtime
+* Command parsing and tokenization
+* External command execution via `fork()` + `execvp()`
+* Built-in commands:
 
-## Building
+  * `cd`
+  * `pwd`
+  * `exit`
+  * `history`
+  * `clear`
+  * `stats`
+* Multi-stage pipelines
+* Input/output redirection
+* Background process execution
+* Signal handling (`SIGINT`, `SIGTSTP`)
+* Command logging and execution metrics
+* Dockerized runtime environment
+* Modular subsystem architecture
 
-### Prerequisites
-
-- Linux (Ubuntu 20.04+) or WSL2
-- GCC 7.5+
-- GNU Make 4.1+
-
-### Compile
-
-```bash
-make
-```
-
-Binary output: `bin/joysh`
-
-### Docker
-
-```bash
-docker build -t joysh .
-docker run -it joysh
-```
-
-## Usage
-
-```bash
-$ ./bin/joysh
-joysh$ ls -la | grep txt > files.txt
-joysh$ cat < input.txt | sort
-joysh$ sleep 10 &
-[Background] PID: 1234
-joysh$ stats
-=== joysh Statistics ===
-Total commands executed: 3
-Background jobs: 1
-Pipes executed: 1
-Failed commands: 0
-Shell uptime: 45 seconds
-joysh$ exit
-```
+---
 
 ## Architecture
 
+```text
+src/
+├── main.c          Shell loop and orchestration
+├── tokenizer.c     Input tokenization
+├── parser.c        Command parsing
+├── executor.c      Process execution and pipelines
+├── builtins.c      Built-in shell commands
+├── redirect.c      File descriptor redirection
+├── signals.c       Signal handling
+└── logger.c        Logging and metrics
 ```
-Input → Tokenizer → Parser → Executor
-                              ↓
-                     fork/exec/pipe/wait
+
+---
+
+## System Calls Used
+
+| System Call   | Purpose                     |
+| ------------- | --------------------------- |
+| `fork()`      | Process creation            |
+| `execvp()`    | Program execution           |
+| `waitpid()`   | Process synchronization     |
+| `pipe()`      | Inter-process communication |
+| `dup2()`      | File descriptor duplication |
+| `open()`      | File operations             |
+| `close()`     | File descriptor cleanup     |
+| `sigaction()` | Signal handling             |
+| `chdir()`     | Directory management        |
+| `getcwd()`    | Current working directory   |
+
+---
+
+## Build
+
+### Native Linux / WSL
+
+```bash
+make
+./bin/joysh
 ```
 
-The shell is implemented as modular components:
+---
 
-| Module | Purpose | Key System Calls |
-|--------|---------|------------------|
-| tokenizer | Input parsing | - |
-| parser | Command structure building | - |
-| executor | Process management | fork, execvp, waitpid, pipe, dup2 |
-| builtins | Shell-internal commands | chdir, getcwd |
-| redirect | I/O redirection | open, close, dup2 |
-| signals | Signal handling | sigaction |
-| logger | Command logging | fopen, fprintf |
+## Docker
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed design.
+```bash
+docker build -t joysh .
+docker run --rm -it joysh
+```
 
-## Implementation Details
+---
 
-### Process Management
+## Runtime
 
-Commands execute in child processes created via `fork(2)`. The parent waits on foreground jobs with `waitpid(2)` to prevent zombies. Background jobs (`&`) run asynchronously.
+### Docker Build
 
-### Pipes
+![Docker Build](screenshots/build.png)
 
-Pipelines use `pipe(2)` to create kernel buffers (64KB on Linux). File descriptors are duplicated with `dup2(2)` to connect process stdin/stdout. All unused pipe ends are closed to prevent deadlocks.
+### Interactive Shell
 
-### Redirection
+![Shell Startup](screenshots/startup.png)
 
-File redirection uses `open(2)` with appropriate flags:
-- Input (`<`): `O_RDONLY`
-- Output (`>`): `O_WRONLY | O_CREAT | O_TRUNC`
-- Append (`>>`): `O_WRONLY | O_CREAT | O_APPEND`
+### Pipes, Background Jobs and Metrics
 
-File descriptors are duplicated to stdin/stdout via `dup2(2)`.
+![Shell Operations](screenshots/pipes.png)
 
-### Signal Handling
+### Error Handling and Exit
 
-The parent shell catches SIGINT and SIGTSTP using `sigaction(2)` with `SA_RESTART` to prevent interruption of system calls. Child processes inherit default signal handlers.
+![Shell Exit](screenshots/exit.png)
+---
+
+## Example Usage
+
+```bash
+joysh$ pwd
+
+joysh$ ls | grep txt
+
+joysh$ echo "hello" > output.txt
+
+joysh$ sleep 10 &
+
+joysh$ stats
+
+joysh$ exit
+```
+
+---
 
 ## Testing
 
 ```bash
-# Run test suite
 chmod +x tests/test.sh
 ./tests/test.sh
+```
 
-# Memory leak check (requires Valgrind)
+Memory leak checks:
+
+```bash
 make valgrind
 ```
 
-## System Requirements
+---
 
-- POSIX-compliant OS (Linux, *BSD, macOS)
-- Required system calls: fork, execvp, waitpid, pipe, dup2, open, close, chdir, sigaction
+## Build Targets
 
-**Windows users:** See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for WSL/Docker instructions.
+```bash
+make
+make clean
+make debug
+make release
+make valgrind
+```
 
-## Performance
+---
 
-| Operation | Complexity | Notes |
-|-----------|-----------|-------|
-| Tokenization | O(n) | Single pass |
-| Parsing | O(n) | Single pass |
-| Command execution | O(1) | Fork overhead ~100-200μs |
-| Pipe creation | O(k) | k = number of pipes |
+## Design Goals
 
-Memory footprint: ~50KB base + ~1KB per command.
+* POSIX-oriented implementation
+* Explicit process lifecycle handling
+* Minimal runtime overhead
+* File descriptor correctness
+* Modular subsystem isolation
+* Reproducible containerized runtime
 
-## Limitations
+---
 
-- No job control (`fg`, `bg`, `jobs`)
-- No environment variable expansion
-- No command substitution
-- No globbing
-- No shell scripting constructs
-- No command-line editing (readline)
+## Current Limitations
 
-## Contributing
+* No job control (`fg`, `bg`, `jobs`)
+* No readline integration
+* No wildcard/globbing expansion
+* No shell scripting support
+* No environment variable expansion
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+---
 
-## Documentation
+## Repository Structure
 
-- [Architecture Design](docs/ARCHITECTURE.md)
-- [Build Instructions](docs/BUILD.md)
-- [System Call Reference](docs/SYSCALLS.md)
+```text
+.
+├── src/
+├── include/
+├── tests/
+├── docs/
+├── screenshots/
+├── Dockerfile
+├── Makefile
+├── LICENSE
+├── README.md
+└── .gitignore
+```
+
+---
 
 ## License
 
-MIT - see [LICENSE](LICENSE)
-
-## References
-
-- Stevens & Rago, *Advanced Programming in the UNIX Environment* (3rd ed.)
-- Kerrisk, *The Linux Programming Interface*
-- `man 2 fork`, `man 2 pipe`, `man 2 execve`
+Licensed under the GNU GPL v3.0.
