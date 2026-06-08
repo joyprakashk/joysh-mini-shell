@@ -1,0 +1,41 @@
+# .gitignore for joysh
+
+# Build artifacts
+build/
+bin/
+*.o
+*.out
+*.exe
+
+# Logs
+*.log
+.joysh_logs
+
+# Test artifacts
+tests/test_files/
+tests/*.txt
+tests/output.txt
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Core dumps
+core
+core.*
+
+# Valgrind
+valgrind-out.txt
+*.memcheck
+
+# Temporary files
+tmp/
+.cache/
+*.tmp

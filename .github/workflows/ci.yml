@@ -1,0 +1,57 @@
+name: CI Build & Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc make valgrind
+    
+    - name: Build joysh
+      run: make
+    
+    - name: Check build artifacts
+      run: |
+        ls -lh bin/joysh
+        file bin/joysh
+    
+    - name: Run basic tests
+      run: |
+        echo "pwd" | ./bin/joysh
+        echo "echo test" | ./bin/joysh
+    
+    - name: Memory leak check
+      run: |
+        echo "pwd" | valgrind --leak-check=full --error-exitcode=1 ./bin/joysh || true
+    
+    - name: Upload binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: joysh-binary
+        path: bin/joysh
+
+  docker:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Build Docker image
+      run: docker build -t joysh:latest .
+    
+    - name: Test Docker image
+      run: |
+        docker run --rm joysh:latest echo "pwd" | /joysh/bin/joysh
